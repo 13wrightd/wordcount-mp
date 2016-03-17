@@ -1,0 +1,38 @@
+Daniel Wright	diw5233@psu.edu
+Evan Gutman	elg5195@psu.edu
+
+
+(i) 
+	The c program 
+		runs through the entire input file using fgetc grabbing each character.
+		it ignores the character if it is not a letter, number, space, or /0 (newline). If it is a letter or number, it adds to a string, and reallocates an additional byte of memory to the string for use in the future. If it is a space or new line, it adds the \0 character to the end and starts iterating through the linked list starting at the head comparing the string to the string in the node. if it finds it, it adds 1 to count of that node. if it reaches the end or reaches a word that comes after alphabetically, then it creates a new node and puts count to 1. This ends with a sorted linked list. At the end we iterate through the linked list and output the data to a file. 
+	The script
+		First the script saves the start time to the variable start, then it uses cat to output first parameter which is a file to sed which removes all characters that arent what we want. then it pipelines it to tr which lowercases everything. Then its pipelied into sed which puts every word into a new line, which again gets pipelined into sed to remove all empty lines. Then its pipelined into sort which just sorts the lines, then pipelined into uniq -c which counts the lines and collapses all adjacent duplicated lines into 1, then finally pipeline it to awk which prints the word followed by a comma and space and the count. The output is put into a file. The time is again collected at the end where we echo the difference between start and end which gets printed to a different file.
+
+	
+
+(ii) We have no experience in c (we had some in c++ so there is some crossover), but none in shell scripting. One of us has some experience in using bash commands and the terminal, using grep, cat, pipelines so that helped during shell scripting.
+
+(iii) We had difficulties in run time because we chose to reallocate memory for each character, which tends to be resource intensive. other than that we had no major difficulties.
+
+(iv) 
+	wordcount.c
+		a. Pangur Ban
+			Mean Runtime = 0.000530s
+			Standard Deviation = .000270s
+		b. Hamlet
+			Mean Runtime = 0.784230s
+			Standard Deviation = 0.033310s
+		c. Arabian Nights
+			Mean Runtime = 31.617030s
+			Standard Deviation = 1.736050s
+	wordcount.sh
+		a. Pangur Ban
+			Mean Runtime = 0.023960s
+			Standard Deviation = 0.069950s
+		b. Hamlet
+			Mean Runtime = 0.089090s
+			Standard Deviation = 0.016780s
+		c. Arabian Nights
+			Mean Runtime = 0.837650s
+			Standard Deviation = 0.022480s
