@@ -1,12 +1,14 @@
-/* Example of use of fork system call */
+// Daniel Wright	diw5233@psu.edu
+// Evan Gutman		elg5195@psu.edu
+
+
 #include <stdio.h>
-//#include <iostream>
-//#include <string>
-// Required by for routine
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <stdio.h> 
+#include <stdbool.h>
+#include <string.h>
+#include <time.h>
 
 //Node structure for linked list
 struct word_t {
@@ -17,124 +19,92 @@ struct word_t {
 
 main(int argc, char *argv[]){
 
-	FILE *fp;
-	fp = fopen(argv[1], "r");
-	pid_t child_pid;
-	int i, n=5;
-	int sz;
-	int startpoint;
-	int endpoint;
-	int startpointParent;
-	int endpointParent;
-	char c;
-	int fd[5][2];
-	int childNum;
-	int *temp;
+	FILE *fp;					//pointer to file
+	fp = fopen(argv[1], "r");	//opens the file
+	pid_t child_pid;			//store the child pid/determine what process
+	int i, n = atoi(argv[2]);	//i is a counter, n is the number of processes
+	int fileSize;				//stores size of the file
+	int startpoint;				//start point for reading
+	int endpoint;				//end point for reading
+	int startpointParent;		//stores the parents start point
+	int endpointParent;			//stores the parents end point
+	char c;						//for reading the file
+	int **fd = (int **)malloc((n-1) * sizeof(int *));	//dynamic 2d array using points
+														//for file descriptors
+	int childNum;				//used to access each pipe
 
-	temp = (int *)malloc(sizeof(int) * 2);
-
-
-	// if (pipe(fd) == -1) {
- //        perror("pipe");
- //        exit(1);
- //    }
-    
-
-
-
-	startpoint=ftell(fp);
-	//printf("%d\n\n", startpoint);
-
-	fseek(fp, 0, SEEK_END);
-	sz = ftell(fp);
-
-	fseek(fp, 0, SEEK_SET);
-
-	endpoint = sz/n;
-	fseek(fp, endpoint, SEEK_CUR);
-
-	while ((c=fgetc(fp)) != EOF && c != 32 && c != 10){
-		//printf("%c",c);
-		;
+	for(i = 0; i < n-1; i++){	//make each row have 2 columns for file descriptors
+		fd[i] = (int *)malloc(2 * sizeof(int));
 	}
 
-	endpoint = ftell(fp);
-	//printf("\n next character: %c\n",c);
-	//c=fgetc(fp);
-	//printf("\n next character: %c\n",c);
-	//c=fgetc(fp);
-	//printf("\n%d\n", endpoint);
+	startpoint = ftell(fp);		//gets the startpoint (beginning of file)
 
+	fseek(fp, 0, SEEK_END);		//goes through to the end of the file
+	fileSize = ftell(fp);		//gets the last position in file (the length/size)
 
-	//printf("%d\n", sz);
+	fseek(fp, 0, SEEK_SET);		//go back to the beginning of the file
+
+	endpoint = fileSize/n;		//make the endpoint 1/n of the way through the file
+	fseek(fp, endpoint, SEEK_CUR);	//go to the endpoint
+
+	while ((c = fgetc(fp)) != EOF && c != 32 && c != 10);	//go to the end of the current word												
+	endpoint = ftell(fp);	//adjust endpoint to be on the start of the next word
+
+	//save these points for the parents rang to read
 	startpointParent = startpoint;
 	endpointParent = endpoint;
 
+	//creates the pipes are the child processes
 	for (i=0; i < n-1; i++){
-		startpoint = endpoint;
-		endpoint += sz/n;
-		if(endpoint >= sz)
-			endpoint = EOF;
+		startpoint = endpoint;	//make the next startpoint the last endpoint
+		endpoint += fileSize/n;	//move the endpoint by 1/n the filesize
+		if(endpoint >= fileSize)	//if addition overshot the filesize
+			endpoint = EOF;			//make endpoint EOF
 		else{
-			fseek(fp, endpoint, SEEK_SET);
-			while ((c=fgetc(fp))!= EOF && c != 32 && c != 10);
-			endpoint = ftell(fp);
-			fseek(fp, startpoint, SEEK_SET);
+			fseek(fp, endpoint, SEEK_SET);	//go to the new endpoint
+			while ((c=fgetc(fp))!= EOF && c != 32 && c != 10);	//go until end of current word
+			endpoint = ftell(fp);			//make the endpoint the start of the next word
+			fseek(fp, startpoint, SEEK_SET);	//go to the startpoint
 		}
 
-		childNum = i + 1;
+		childNum = i;	//used later to identify pipes
 
-		temp = fd[i];
-		if (pipe(temp) == -1) {
-        	perror("pipe failed");
-        	exit(1);
+		if (pipe(fd[i]) == -1) {	//if the pipe setup fails
+        	perror("pipe setup failed.");	//throw error
+        	return 1;	//return 1 to indicate error
    		}
-
-		// if((pipe(fd) == -1) || (child_pid == fork() == -1)){
-		// 	perror("Failed to set up pipeline.");
-		// 	return 1;
-		// }
    		
-
-		child_pid = fork ();
-		if (child_pid == 0)
-			break;
+		child_pid = fork ();	//create a child process
+		if (child_pid == 0)		//if its the child process
+			break;				//break the loop so the children won't make children
 	}
 
+	struct word_t *buf;	//buffer for read and write
+	buf = (struct word_t *)malloc(sizeof(struct word_t));	//allocate space for a node
 
-
-	if (child_pid > 0){  //parent
+	if (child_pid > 0){  //parent process
+		//get the parents start and end point
 		startpoint = startpointParent;
 		endpoint = endpointParent;
 
-		struct word_t *buf;
-		buf = (struct word_t *)malloc(sizeof(struct word_t));
-
-		for(i = 0; i < n-1; i++){
-			read(temp[0], buf, sizeof(struct word_t));	//size * n (n = # of nodes)
-			printf("%s: %d\n", buf->word, buf->count);
-			//, buf->next->word, buf->next->count);
+		for(i = 0; i < n-1; i++){	//go through n-1 time (the number of pipes)
+			read(fd[i][0], buf, sizeof(struct word_t));	//read from the pipe | ***size * list_length***
+			printf("%s: %d\n", buf->word, buf->count);	//print out the word its count
+			close(fd[i][0]);	//close the read end
 		}
-		close(temp[0]);
-		//wait(NULL);
-
 	}
-	else if (child_pid == 0){ //child
-		//printf("child\n");
-		struct word_t *num;
-		num = (struct word_t *)malloc(sizeof(struct word_t));
+	else if (child_pid == 0){	//child process
+		buf->word = "hello";	//temporary for testing
+		buf->count = childNum;	//temporary to test pipes and childprocesses
 
-		num->word = "hello";
-		num->count = childNum;
-		//num->next = (struct word_t *)malloc(sizeof(struct word_t));
-		//num->next->word = "goodbye";
-		//num->next->count = 1;
-
-		write(temp[1], num, sizeof(struct word_t)); //size * n (n = # of nodes)
-		close(temp[1]);
-		exit(0);
-
+		write(fd[childNum][1], buf, sizeof(struct word_t));	//write to the pipe | ***size * list_length***
+		close(fd[childNum][1]);	//close the write end
+		exit(0);	//exit the child process
 	}
 
+	//free pointers
+	free(buf);
+	free(fd);
 
+	return 0;
 }
