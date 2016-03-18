@@ -15,22 +15,23 @@ struct word_t {
 	struct word_t *next;
 };
 
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]){
+
 	FILE *fp;
 	fp = fopen(argv[1], "r");
 	pid_t child_pid;
 	int i, n=5;
-	int position;
 	int sz;
 	int startpoint;
 	int endpoint;
 	int startpointParent;
 	int endpointParent;
 	char c;
-	int fd[2];
+	int fd[5][2];
+	int childNum;
+	int *temp;
 
-
+	temp = (int *)malloc(sizeof(int) * 2);
 
 
 	// if (pipe(fd) == -1) {
@@ -80,13 +81,19 @@ main(int argc, char *argv[])
 			endpoint = ftell(fp);
 			fseek(fp, startpoint, SEEK_SET);
 		}
-		position=i;
 
-		
-		if (pipe(fd) == -1) {
+		childNum = i + 1;
+
+		temp = fd[i];
+		if (pipe(temp) == -1) {
         	perror("pipe failed");
         	exit(1);
    		}
+
+		// if((pipe(fd) == -1) || (child_pid == fork() == -1)){
+		// 	perror("Failed to set up pipeline.");
+		// 	return 1;
+		// }
    		
 
 		child_pid = fork ();
@@ -102,11 +109,13 @@ main(int argc, char *argv[])
 
 		struct word_t *buf;
 		buf = (struct word_t *)malloc(sizeof(struct word_t));
+
 		for(i = 0; i < n-1; i++){
-			read(fd[0], buf, sizeof(struct word_t) * 2);
-			close(fd[0]);
-			printf("%s: %d\n%s: %d\n", buf->word, buf->count, buf->next->word, buf->next->count);
+			read(temp[0], buf, sizeof(struct word_t));	//size * n (n = # of nodes)
+			printf("%s: %d\n", buf->word, buf->count);
+			//, buf->next->word, buf->next->count);
 		}
+		close(temp[0]);
 		//wait(NULL);
 
 	}
@@ -116,13 +125,13 @@ main(int argc, char *argv[])
 		num = (struct word_t *)malloc(sizeof(struct word_t));
 
 		num->word = "hello";
-		num->count = position;
-		num->next = (struct word_t *)malloc(sizeof(struct word_t));
-		num->next->word = "goodbye";
-		num->next->count = 1;
+		num->count = childNum;
+		//num->next = (struct word_t *)malloc(sizeof(struct word_t));
+		//num->next->word = "goodbye";
+		//num->next->count = 1;
 
-		write(fd[1], num, sizeof(struct word_t) * 2);
-		close(fd[1]);
+		write(temp[1], num, sizeof(struct word_t)); //size * n (n = # of nodes)
+		close(temp[1]);
 		exit(0);
 
 	}
