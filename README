@@ -1,22 +1,41 @@
-Daniel Wright	diw5233@psu.edu
-Evan Gutman	elg5195@psu.edu
+Daniel Wright and Evan Gutman	
 
+diw5233@psu.edu
+elg5195@psu.edu
 
-(i) 
-	The c program 
-		runs through the entire input file using fgetc grabbing each character.
-		it ignores the character if it is not a letter, number, space, or /0 (newline). If it is a letter or number, it adds to a string, and reallocates an additional byte of memory to the string for use in the future. If it is a space or new line, it adds the \0 character to the end and starts iterating through the linked list starting at the head comparing the string to the string in the node. if it finds it, it adds 1 to count of that node. if it reaches the end or reaches a word that comes after alphabetically, then it creates a new node and puts count to 1. This ends with a sorted linked list. At the end we iterate through the linked list and output the data to a file. 
-	The script
-		First the script saves the start time to the variable start, then it uses cat to output first parameter which is a file to sed which removes all characters that arent what we want. then it pipelines it to tr which lowercases everything. Then its pipelied into sed which puts every word into a new line, which again gets pipelined into sed to remove all empty lines. Then its pipelined into sort which just sorts the lines, then pipelined into uniq -c which counts the lines and collapses all adjacent duplicated lines into 1, then finally pipeline it to awk which prints the word followed by a comma and space and the count. The output is put into a file. The time is again collected at the end where we echo the difference between start and end which gets printed to a different file.
+(i) Group member names
+Daniel Wright
+Evan Gutman
 
-	
+(ii) Program description
+The program first loads the input file and seeks to the end, then uses the ftell command to tell the size of the file.
+this gets stored in a variable called sz and then divided by n (number of processes). The program then goes to the sz/n'th bit of the file and 
+then seeks to the next newline or space character. This point is saved to a variable endpoint which will later signal when that process
+should stop. The endpoint is used as the startpoint for the next process and the process repeats. So startpoint and endpoint are constantly 
+getting updated for each process but before they get changed, the program forks so that the child process will still have those points. 
+each child process then uses the algorithm from the first project to make a linked list, which then gets piped through 1 of the N pipes
+to the parent where the parent merges it with its own linked list, which consists of the first sz/n bits.
 
-(ii) We have no experience in c (we had some in c++ so there is some crossover), but none in shell scripting. One of us has some experience in using bash commands and the terminal, using grep, cat, pipelines so that helped during shell scripting.
+(iii) Difficulties
+We mostly had difficulties learning the fork command and with piping.
+forking was straight forward once we looked up some examples and understood what they meant. We thought that because pointers point to an area of 
+data, that our linked list could be accessed from all forked processes but we learned that a forked process has a copy of the parents memory 
+space so the pointers would be copied but they would now point to seperate copies. We also had some issues with piping. We knew how to use 1 pipe
+and have all child processes use it, but the guidelines said to use n-1 pipes. This took a bit of time to come up with a solution but we ended up
+using a dynamically allocated multidimensional array, dynamic because N can change. 
 
-(iii) We had difficulties in run time because we chose to reallocate memory for each character, which tends to be resource intensive. other than that we had no major difficulties.
+(iv) System calls and library functions used
+stdio.h, stdlib.h, stdbool.h, sys/types.h, string.h, time.h, ctype.h, were the different libraries used.
+Some functions and system calls we used were pipe, fork, timing functions, fopen, fgetc, ftell, fseek, and wait.
 
-(iv) 
-	wordcount.c
+(v) Interesting design choices
+The choice design to pipe all the data to the parent was in our opinion an interesting choice. From research, we knew it was possible to have some 
+shared memory between the processes. This would make it possible for each process to add their data directly the final linked list rather than 
+making their own, and then piping the information. Doing it this way would be a lot easier to program and also be more efficient but doing it the 
+way described in the guidelines allowed us to learn how pipes work.
+
+(vi) Performance measurement results
+wordcount.c
 		a. Pangur Ban
 			Mean Runtime = 0.000530s
 			Standard Deviation = .000270s
