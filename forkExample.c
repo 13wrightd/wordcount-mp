@@ -194,19 +194,25 @@ main(int argc, char *argv[]){
 	        fclose(fp);	//close the file
 
 	        if(child_pid == 0){	//child process
-	        	write(fd[childNum][1], numNodes, sizeof(int));
+	        	write(fd[childNum][1], numNodes, sizeof(int));	//write the size of childs list
 	        	write(fd[childNum][1], head, sizeof(struct word_t) * (*numNodes));		//write to the pipe
 	        	close(fd[childNum][1]);		//close the write end of the pipe
-	        	free(numNodes);
+	        	//free(numNodes);
 	        	exit(0);
 	        }
 	        else if(child_pid > 0){		//parent process
+	        	int *childNodes;
+	        	struct word_t *temp;
+
 	        	for(i = 0; i < n-1; i++){
 	        		waitpid(children[i], NULL, 0);
-	        		int *childNodes = (int *)malloc( sizeof(int));
+
+	        		childNodes = (int *)malloc( sizeof(int));
 	        		read(fd[i][0], childNodes, sizeof(int));
-	        		struct word_t *temp = (struct word_t *)malloc( sizeof(struct word_t));
+
+	        		temp = (struct word_t *)malloc( sizeof(struct word_t));
 	        		read(fd[i][0], temp, ((*childNodes) * sizeof(struct word_t)));
+
 	        		close(fd[i][0]);
 	        		free(childNodes);
 
@@ -260,7 +266,7 @@ main(int argc, char *argv[]){
 		               	}
 		               	currChild = currChild->next;
 	                }
-	                free(temp);
+	                //free(temp);	//possible error
 	        	}
 	        }
 	        free(children);
