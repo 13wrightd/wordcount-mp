@@ -43,7 +43,6 @@ main(int argc, char *argv[]){
 	    struct word_t *curr;		//iterator
 	    bool badCharacter = 0;		//for handling double \n
 	    bool found = false;			//for searching the linked list
-	    int *numNodes = (int *)malloc( sizeof(int));
 		int **fd = (int **)malloc((n-1) * sizeof(int *));	//dynamic 2d array using points
 															//for file descriptors
 		int childNum;				//used to access each pipe
@@ -104,27 +103,33 @@ main(int argc, char *argv[]){
 					return 1;
 				}
 				else if (child_pid == 0){	//if its the child process
-					fclose(fp);			//close the file
+					//fclose(fp);			//close the file
 					break;				//break the loop so the children won't make children
 				}
 				else if (child_pid > 0)
 					children[i] = child_pid;
 			}
+			fclose(fp);
 
 			if (child_pid > 0){  //parent process
 				//get the parent's end point
+				childNum = 4;
+				startpoint = 0;
 				endpoint = endpointParent;
-				fseek(fp, 0, SEEK_SET);	
-			}
-			else if(child_pid == 0){	//child process
-				fp = fopen(argv[1], "r");
-				if(fp == NULL){
-					perror("failed to open file.");
-					exit(1);
-				}
 			}
 
+			fp = fopen(argv[1], "r");
+			if (fp == NULL){
+				perror("failed to open file.");
+				return 1;
+			}
+
+			fseek(fp, startpoint, SEEK_SET);
+
+			int *numNodes = (int *)malloc( sizeof(int));
+			*numNodes = 0;
 			while ((c = fgetc(fp))!=EOF && ftell(fp) != endpoint){	//go to the endpoint or break if end of file
+
 	            if((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57)){	//if c is alphanumeric
 	                str[numChar] = tolower(c);	//lowercase it
 	                numChar++;	//add to length of the char
@@ -144,7 +149,7 @@ main(int argc, char *argv[]){
 	                		curr->word = str;
 	                		curr->count++;
 	                		found = true;
-	                		*numNodes++;
+	                		*numNodes += 1;
 	                	}
 	                	
 	            		else if(strcmp(str, curr->word) < 0){	//if str comes before the current word then insert it into the list before
@@ -160,8 +165,7 @@ main(int argc, char *argv[]){
 	                        curr->next = newNode;
 
 	                        found = true;
-	                        *numNodes++;
-	                        free(newNode); //check if error occurs
+	                        *numNodes += 1;
 	                    }
 
 	                    
@@ -171,7 +175,7 @@ main(int argc, char *argv[]){
 	                                curr->next->word = str;
 	                                curr->next->count++;
 	                                found = true;
-	                                *numNodes++;
+	                                *numNodes += 1;
 	                        }
 	                        else{
 	                                curr = curr->next;
@@ -185,19 +189,17 @@ main(int argc, char *argv[]){
 	               	}
 	               	found = false;	//reset found
 	               	curr = head;	//reset the iterator
-	               	//free(str);
 	            	str = (char *)malloc( sizeof(char));	//reset str
-	            	
 	        	}
 	        }
-	        free(str);
+
+	        //free(str);
 	        fclose(fp);	//close the file
 
 	        if(child_pid == 0){	//child process
 	        	write(fd[childNum][1], numNodes, sizeof(int));	//write the size of childs list
 	        	write(fd[childNum][1], head, sizeof(struct word_t) * (*numNodes));		//write to the pipe
 	        	close(fd[childNum][1]);		//close the write end of the pipe
-	        	//free(numNodes);
 	        	exit(0);
 	        }
 	        else if(child_pid > 0){		//parent process
@@ -210,20 +212,25 @@ main(int argc, char *argv[]){
 	        		childNodes = (int *)malloc( sizeof(int));
 	        		read(fd[i][0], childNodes, sizeof(int));
 
+	        		printf("%d\n", *childNodes);		//*************************
+
 	        		temp = (struct word_t *)malloc( sizeof(struct word_t));
 	        		read(fd[i][0], temp, ((*childNodes) * sizeof(struct word_t)));
 
 	        		close(fd[i][0]);
 	        		free(childNodes);
 
-	        		struct word_t *currChild = temp;
+	        		struct word_t *currChild;
+	        		currChild = temp;
 	        		while(currChild != NULL){
+	        			str = (char *)malloc( sizeof(char));
 	        			curr = head;
 	        			found = false;
 	        			str = currChild->word;
 
-		        		while(!found){	//go until you find the word in the list
+	        			printf("%s\n", str);	//***********************************
 
+		        		while(!found){	//go until you find the word in the list
 		                	if(curr->word == NULL){	//if the current word is null add str to the node and incerment its counter 
 		                		curr->word = str;
 		                		curr->count = currChild->count;
@@ -243,7 +250,7 @@ main(int argc, char *argv[]){
 		                        curr->next = newNode;
 
 		                        found = true;
-		                        free(newNode);
+		                        //free(newNode);
 		                    }
 
 		                    
