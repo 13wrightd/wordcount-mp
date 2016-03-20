@@ -10,6 +10,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
+
 
 //Node structure for linked list
 struct word_t {
@@ -40,13 +42,14 @@ main(int argc, char *argv[]){
 		char *str = (char *)malloc( sizeof(char));					//to store each string
 		int numChar = 0;			//the number of charcters in the string
 		struct word_t *head;		//Linked list
+	    struct word_t *head2;
 	    struct word_t *curr;		//iterator
 	    bool badCharacter = 0;		//for handling double \n
 	    bool found = false;			//for searching the linked list
 		int **fd = (int **)malloc((n-1) * sizeof(int *));	//dynamic 2d array using points
 															//for file descriptors
 		int childNum;				//used to access each pipe
-
+		head2 = (struct word_t *)malloc( sizeof(struct word_t));
 
 		head = (struct word_t *)malloc( sizeof(struct word_t));	//allocate space for the linked list
 	    curr = head;	//start at the begining of the list
@@ -197,12 +200,26 @@ main(int argc, char *argv[]){
 	        fclose(fp);	//close the file
 
 	        if(child_pid == 0){	//child process
+	        	printf("points (%d, %d)\n ", endpoint, startpoint);
 	        	write(fd[childNum][1], numNodes, sizeof(int));	//write the size of childs list
-	        	write(fd[childNum][1], head, sizeof(struct word_t) * (*numNodes));		//write to the pipe
+	        	struct word_t *send;
+	        	send=head;
+	        	while(send!=NULL){
+	        		printf("%s sending\n", send->word);
+	        		write(fd[childNum][1], send->word, sizeof(char)*70);
+	        		write(fd[childNum][1], &(send->count), sizeof(int));
+
+	        		//write(fd[childNum][1], send, sizeof(struct word_t));
+	        		send=send->next;
+	        	}
+
+
+	        //	write(fd[childNum][1], head, sizeof(struct word_t) * (*numNodes));		//write to the pipe
 	        	close(fd[childNum][1]);		//close the write end of the pipe
 	        	exit(0);
 	        }
 	        else if(child_pid > 0){		//parent process
+	        	sleep(1);
 	        	int *childNodes;
 	        	struct word_t *temp;
 
@@ -213,22 +230,70 @@ main(int argc, char *argv[]){
 	        		read(fd[i][0], childNodes, sizeof(int));
 
 	        		printf("%d\n", *childNodes);		//*************************
+	        		struct word_t *root;
+	        		//head2= (struct word_t *)malloc( sizeof(struct word_t));
+	        		
+	        		temp=head2;
+	        			char buf[70];
 
-	        		temp = (struct word_t *)malloc( sizeof(struct word_t));
-	        		read(fd[i][0], temp, ((*childNodes) * sizeof(struct word_t)));
+	        		for(int k=0; k<(*childNodes)-1; k++){
+	        			if (k==0){
+	        				root=temp;
+	        			}
+	        			int tempInt;
+	        			char *stri;
+	        			read(fd[i][0], buf,   70*sizeof(char));
+	        			read(fd[i][0], &tempInt,  sizeof(int));
+
+	        			
+	                    //newNode = (struct word_t *)malloc(sizeof(struct word_t));
+	                    //temp->word=(char*) malloc(70*sizeof(char));
+	        			//temp->word=buf;
+	        			stri=(char*) malloc(70*sizeof(char));
+	        			if(k%2==0)
+	        	
+	        				stri="aaa";
+	        			else
+	        				stri="zzz";
+
+	        			stri=strdup(buf);
+	        			temp->word=stri;
+	        			
+	        			temp->count=tempInt;
+	        			
+	        			
+	        			temp->next=(struct word_t *)malloc( sizeof(struct word_t));
+	        			temp=temp->next;
+	        			//strcpy(temp->word, buf);
+
+	        			printf("%d %d %s\n", k, tempInt, buf);
+	        			//printf("%d %s\n", k, buf);
+	        			// temp->next=(struct word_t *)malloc( sizeof(struct word_t));
+	        			// temp=temp->next;
+	        		}
+
+	        		// struct word_t *iter;
+	        		// iter=head2
+	        		temp=root;
+	        		while( temp!= NULL){
+	        			printf("printing %s  %d\n", temp->word, temp->count);
+	        			temp=temp->next;
+	        		}
+
+	        		//read(fd[i][0], temp, ((*childNodes) * sizeof(struct word_t)));
 
 	        		close(fd[i][0]);
 	        		free(childNodes);
 
 	        		struct word_t *currChild;
-	        		currChild = temp;
-	        		while(currChild != NULL){
+	        		currChild = root;
+	        		while(currChild->next != NULL){
 	        			str = (char *)malloc( sizeof(char));
 	        			curr = head;
 	        			found = false;
 	        			str = currChild->word;
 
-	        			printf("%s\n", str);	//***********************************
+	        			printf(".%s\n", str);	//***********************************
 
 		        		while(!found){	//go until you find the word in the list
 		                	if(curr->word == NULL){	//if the current word is null add str to the node and incerment its counter 
